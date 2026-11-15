@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Chase Card Trap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one reading column (odds, chart, budget, simulator, psychology, advice); numbers do the arguing, the simulator sits mid-page as the proof. */
+:root{
+  --bg:#f3f5f7;--surface:#ffffff;--surface2:#e9edf1;--ink:#14202b;--ink2:#4a5a68;--ink3:#6b7a87;--line:#d3dae1;
+  --accent:#0f6b7a;--accent-ink:#ffffff;--loss:#b3361f;--gain:#1f7a45;--warn-bg:#fdf0d5;--warn-ink:#6f4400;
+  --rare:#b97d0c;--mythic:#c2452d;--head:#6a4fc4;--foil-bg:#ece8fa;--foil-ink:#4a3697;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;--body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#0e151b;--surface:#16212a;--surface2:#1e2c37;--ink:#e6edf2;--ink2:#a9b8c4;--ink3:#8596a3;--line:#2c3c49;
+  --accent:#4fc0d0;--accent-ink:#06222a;--loss:#ff8a70;--gain:#6fd698;--warn-bg:#3a2c0c;--warn-ink:#f5d38a;
+  --rare:#e0a93a;--mythic:#f0795f;--head:#a590f0;--foil-bg:#2c2550;--foil-ink:#cfc4ff;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#0e151b;--surface:#16212a;--surface2:#1e2c37;--ink:#e6edf2;--ink2:#a9b8c4;--ink3:#8596a3;--line:#2c3c49;
+  --accent:#4fc0d0;--accent-ink:#06222a;--loss:#ff8a70;--gain:#6fd698;--warn-bg:#3a2c0c;--warn-ink:#f5d38a;
+  --rare:#e0a93a;--mythic:#f0795f;--head:#a590f0;--foil-bg:#2c2550;--foil-ink:#cfc4ff;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+main{max-width:860px;margin:0 auto;padding:40px 20px 64px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(34px,6vw,52px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:28px;font-weight:700}
+h3{font-size:18px;font-weight:600}
+p{margin:0;max-width:66ch}
+section{display:flex;flex-direction:column;gap:18px}
+.lede{font-size:20px;color:var(--ink2)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{font-size:14px;color:var(--ink3)}
+a{color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.controls{display:flex;flex-wrap:wrap;gap:20px 28px;align-items:end}
+label{font-size:14px;color:var(--ink2);display:flex;flex-direction:column;gap:6px}
+input[type=number],input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:130px}
+input[type=text]{width:100%}
+input[type=range]{accent-color:var(--accent);width:220px}
+input:focus-visible,button:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-size:15px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--ink3);border-radius:6px;padding:8px 14px;cursor:pointer}
+button:hover{background:var(--surface2)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.08);background:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.tile .k{font-size:14px;color:var(--ink2)}
+.tile .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:500;line-height:1.2}
+.tile .s{font-size:13px;color:var(--ink3)}
+.loss{color:var(--loss)}.gain{color:var(--gain)}
+.chartwrap{position:relative}
+svg{display:block;width:100%;height:auto}
+.ax{font-family:var(--body);font-size:12px;fill:var(--ink3)}
+.lab{font-family:var(--body);font-size:13px;fill:var(--ink)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;line-height:1.4;padding:6px 10px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-120%);display:none}
+.callout{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:16px 20px}
+.callout p{max-width:none}
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cd{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:112px;background:var(--surface);display:flex;flex-direction:column}
+.cd.R{border-color:var(--rare);border-width:2px}.cd.M{border-color:var(--mythic);border-width:2px}.cd.H{border-color:var(--head);border-width:2px}.cd.tgt{border-color:var(--gain);border-width:2px}
+.pl{display:inline-block;font-size:11px;font-weight:500;padding:1px 7px;border-radius:4px;margin:0 4px 4px 0;background:var(--surface2);color:var(--ink2)}
+.pl.R{color:var(--rare)}.pl.M{color:var(--mythic)}.pl.H{color:var(--head)}.pl.f{background:var(--foil-bg);color:var(--foil-ink)}
+.nm{font-size:14px;font-weight:500;line-height:1.3;margin:4px 0}
+.sl{font-size:11px;color:var(--ink3)}
+.pr{margin-top:auto;padding-top:6px;font-family:var(--mono);font-size:14px}
+.pr small{font-family:var(--body);font-size:11px;color:var(--ink3)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink2);cursor:pointer}
+.err{color:var(--loss);font-size:14px;min-height:20px}
+.hint{font-size:14px;color:var(--ink2);min-height:20px}
+.res{font-size:15px;line-height:1.7}
+.traps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.traps div{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--ink);padding-top:12px}
+.traps p{font-size:16px;color:var(--ink2)}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;max-width:66ch}
+footer{font-size:14px;color:var(--ink3);display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:20px}
+footer p{max-width:none}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+
+<header style="display:flex;flex-direction:column;gap:16px">
+<h1>What it really costs to pull a signed card</h1>
+<p class="lede">Magic's Star Trek set hides about 1,400 actor-signed cards inside its $37.99 collector boosters. Opening packs until you find one costs, on average, about <span class="num" id="hAvg">$47,488</span>. This page shows the math, then lets you try it with fake money.</p>
+</header>
+
+<section aria-labelledby="s-odds">
+<h2 id="s-odds">The odds</h2>
+<p>Wizards of the Coast says a signed headliner card appears in fewer than 1% of collector boosters and that about 200 copies of each of the 7 cards exist. It doesn't publish the exact rate, so this page assumes one. Change it and every number below updates.</p>
+<div class="panel controls">
+<label for="odds">Assumed odds: 1 signed card in <span><span class="num" id="oddsV">1,250</span> packs</span>
+<input id="odds" type="range" min="200" max="5000" step="50" value="1250"></label>
+<label for="price">Price per pack ($)
+<input id="price" type="number" min="1" step="0.01" value="37.99"></label>
+</div>
+<div class="tiles">
+<div class="tile"><span class="k">Chance in one box of 12 packs</span><span class="v" id="tBox"></span><span class="s" id="tBoxS"></span></div>
+<div class="tile"><span class="k">Packs for a coin-flip chance</span><span class="v" id="t50"></span><span class="s" id="t50S"></span></div>
+<div class="tile"><span class="k">Packs to be 90% sure</span><span class="v" id="t90"></span><span class="s" id="t90S"></span></div>
+<div class="tile"><span class="k">Average spend to pull one</span><span class="v loss" id="tAvg"></span><span class="s" id="tAvgS"></span></div>
+</div>
+<h3>Chance you've pulled a signed card, by packs opened</h3>
+<div class="panel chartwrap" id="chartwrap">
+<svg id="chart" viewBox="0 0 760 320" role="img" aria-label="Line chart of the chance of having pulled at least one signed card as more packs are opened"></svg>
+<div class="tip" id="tip"></div>
+</div>
+<p class="note">The curve never reaches 100%. One hunter in ten is still empty-handed at the 90% mark.</p>
+</section>
+
+<section aria-labelledby="s-budget">
+<h2 id="s-budget">What your budget buys</h2>
+<div class="panel controls">
+<label for="budget">Your budget ($)
+<input id="budget" type="number" min="0" step="10" value="500"></label>
+</div>
+<div class="tiles">
+<div class="tile"><span class="k">Packs you can open</span><span class="v" id="bPacks"></span></div>
+<div class="tile"><span class="k">Chance of a signed card</span><span class="v" id="bChance"></span><span class="s" id="bChanceS"></span></div>
+<div class="tile"><span class="k">Typical value of the other cards</span><span class="v" id="bBack"></span><span class="s" id="bBackS"></span></div>
+<div class="tile"><span class="k">Expected loss without a signed card</span><span class="v loss" id="bLoss"></span></div>
+</div>
+</section>
+
+<section aria-labelledby="s-sim">
+<h2 id="s-sim">Try it with fake money</h2>
+<p>This simulator follows the published slot-by-slot contents of a collector booster and prices each card at market value. Type what you're chasing and it keeps buying packs until you pull it.</p>
+<div class="panel" style="display:flex;flex-direction:column;gap:14px">
+<div class="row">
+<button class="primary" id="go" type="button">Open a pack</button>
+<button id="ten" type="button">Open 10</button>
+<button id="rst" type="button">Reset totals</button>
+<label for="pct" style="flex-direction:row;align-items:center;gap:8px;margin-left:auto">Sell at <input id="pct" type="range" min="50" max="100" step="1" value="100" style="width:120px"> <span><span class="num" id="pctv">100</span>% of market</span></label>
+</div>
+<div style="border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px">
+<label for="hn" style="font-size:15px;color:var(--ink);font-weight:500">Keep buying until I pull…
+<input id="hn" type="text" list="names" value="any signed card" autocomplete="off"></label>
+<datalist id="names"></datalist>
+<div class="chips" id="exs"></div>
+<div class="hint" id="hint"></div>
+<div class="err" id="herr" role="alert"></div>
+<div class="row">
+<button class="primary" id="hgo" type="button">Hunt once</button>
+<button id="htr" type="button">Run 50 hunts</button>
+<button id="hstop" type="button">Stop</button>
+<span class="note" id="hprog"></span>
+</div>
+<div class="res" id="hres"></div>
+</div>
+</div>
+<div class="tiles">
+<div class="tile"><span class="k">Packs opened</span><span class="v" id="mP">0</span></div>
+<div class="tile"><span class="k">Spent</span><span class="v" id="mS">$0.00</span></div>
+<div class="tile"><span class="k">Cards sell for</span><span class="v" id="mV">$0.00</span></div>
+<div class="tile"><span class="k">Profit or loss</span><span class="v" id="mN">$0.00</span></div>
+</div>
+<div class="res" id="sum"></div>
+<div class="note" id="best"></div>
+<div class="cg" id="grid"></div>
+</section>
+
+<section aria-labelledby="s-why">
+<h2 id="s-why">Why the chase feels winnable</h2>
+<div class="traps">
+<div><h3>You see the hits, never the misses</h3><p>Pull videos show the one pack with the signature. The thousand packs that missed don't get posted.</p></div>
+<div><h3>A miss doesn't make you due</h3><p>Every pack has the same odds as the last one. Opening 500 without a hit does nothing for pack 501.</p></div>
+<div><h3>Money already spent pulls you onward</h3><p>After $2,000, stopping feels like wasting it. That money is gone either way, and the next pack costs the same as the first.</p></div>
+<div><h3>Small wins hide the loss</h3><p>A $20 card from a $38 pack feels like a win. It keeps you opening while the running total goes down.</p></div>
+</div>
+</section>
+
+<section aria-labelledby="s-do">
+<h2 id="s-do">If you want the card</h2>
+<ol>
+<li><strong>Price the card itself first.</strong> For nearly every card in the set, buying the single costs a small fraction of what hunting for it costs. Run a hunt above and compare the spend to the card's price.</li>
+<li><strong>Set the amount before you open anything.</strong> Treat it as the price of an evening's fun, the way you would a concert ticket, and stop when it's gone.</li>
+<li><strong>Count the total, not the last pack.</strong> One good pull doesn't mean you're ahead. The profit or loss tile is the honest number.</li>
+</ol>
+<div class="callout"><p>If spending on packs has become hard to stop, the National Council on Problem Gambling runs a free US helpline at 1-800-GAMBLER.</p></div>
+</section>
+
+<footer>
+<p><strong>What's assumed.</strong> The signed-card rate is this page's assumption, not a published figure. Card prices are TCGplayer Near Mint market prices from November 15, 2026. Prices marked "est" had no price to hand (regular foils, Commander and Stardates cards) and are estimates. Signed cards are valued at $15,000, the one asking price listed; none has a confirmed sale. The card pool is partial, so results are an illustration, not a forecast.</p>
+<p>Sources: <a href="https://magic.wizards.com/en/news/feature/collecting-star-trek">Collecting Magic: The Gathering | Star Trek</a> (pack contents and odds), <a href="https://www.tcgplayer.com/categories/trading-and-collectible-card-games/magic-the-gathering/price-guides/star-trek">TCGplayer price guide</a>, <a href="https://www.mtggoldfish.com/index/TRC-all">MTGGoldfish</a> (Commander and Stardates prices).</p>
+<p>An independent educational page. Not affiliated with or endorsed by Wizards of the Coast, Paramount, or TCGplayer.</p>
+</footer>
+</main>
+
+<script>
+const P=s=>s.split(";").map(x=>{const a=x.split("|");return[a[0],+a[1],a[2]?+a[2]:null]});
+const CN=P(`A Good Day to Die|.15;Andromedan Automatons|.09;Assault Drone|.14;Astute Terraformer|.14;Automated Warfare System|.18;Battle-Scarred Survivalist|.19;Boarding Action|.17;Cantankerous Captain|.11;Captain's Tutelage|.1;Cetacean Ops|.19;Cha'DIch Investigator|.13;Class-F Shuttlecraft|.2;Cloistered Telepath|.09;Cold-Blooded Crew|.23;Command Decision|.14;Common Goal|.13;Consider the Prime Directive|.14;Cybernetic Specialist|.15;DOT-7 Repair Squad|.14;Dahar Master|.13;Dathon and Picard at El-Adrel|.16;Dominion Assault Force|.1;Dominion Supervisor|.13;Eject the Warp Core|.17;Emergency Holographic Crew|.21;Emergency Medical Hologram|.12;Federation Field Medic|.18;Federation Probe|.15;Final Frontier|.21;First Contact|.16;Free Borg Revolutionaries|.2;Fugitive Listener|.16;Genesis Effect|.16;Guidance Failure|.18;He's Dead, Jim|.13;Horta|.14;Humpback Whales|.17;I'm a Doctor, Not a . . .|.11;Interstellar Effigy|.08;Make It So|.11;Malfunctioning Holodeck|.21;Marooned|.14;Melkotian Adjudicator|.13;Moopsy|.14;Oberth-Class Starship|.16;Obsidian Order Operative|.13;Open Communications|.18;Pattern Buffer Preservation|.15;Perils of the Past|.12;Pet Sehlat|.13;Photosynthetic Physician|.15;Planetary Bombardment|.14;Planetary Patrol|.1;Plasma Cascade|.14;Pure Energy|.11;Reckless Impulse|.14;Relentless Drednok|.14;Rogue Artificial Intelligence|.17;Saurian Explorer|.12;Savvy Profiteer|.2;Set Phasers to . . .|.12;Shields Up!|.18;Shuttle Ace|.13;Silicate Surveyor|.06;Starfleet Security|.13;Starfleet Spanner Jockey|.1;Stray from History|.24;Suurok-Class Science Vessel|.14;Suus Mahna Practitioner|.18;Tactical Officer|.15;Tal Shiar Analyst|.16;Tal Shiar Operative|.15;Tea, Earl Grey, Hot|.13;Temporal Conqueror|.1;Tenacious Drone|.13;Tricorder|.15;Unexplored Territory|.16;Vexing Drone|.17;Warp Core|.21;Xenobotanist|.12;Xindi Surveyors|.12`);
+const DUAL=P(`Andoria|.19;Bajor|.23;Cardassia Prime|.2;Earth, Sector 001|.21;Ferenginar|.2;Orion|.23;Qo'noS|.22;Risa|.17;Romulus|.25;Vulcan|.23`);
+const UN=P(`70,000 Light-Years from Home|.2;Academy Instructor|.21;Adversary by Algorithm|.11;Amok Time|.18;Anthropological Mission|1.1;Artificial Anomaly|.27;Assembly Specialist|.2;Bat'leth|.16;Beckett Mariner, Impetuous Ensign|.13;Blastoneuron|.2;Brad Boimler, Eager Ensign|.26;Captain Michael Burnham|.24;Cleveland Booker, Empath|.15;Cloak and Phaser|.14;Collective Drone|.26;Combadge|.28;Command Subadjunct|.31;Commander Raffi Musiker|.15;Conquest Mission|.27;Constable Odo|.18;Culber and Stamets, Star-Crossed|.09;D'Ghor Bloodletter|.21;D'Vana Tendi, Optimistic Ensign|.2;Dal R'El, Augment Orphan|.27;Daniels, Temporal Agent|.14;Data, New Life|.25;David and Carol Marcus, Creators|.23;De-evolve|.15;Dominion Saboteur|.26;Dr. McCoy, Surly Surgeon|.24;Energize|.16;Ensign Pavel Chekov|.21;Enterprise NX-01|.26;Erica Ortegas, Plucky Pilot|.11;Exploratory Mission|.21;Gabriel Lorca, Mirror Menace|.15;Gaseous Anomaly|.22;Ghost of Illyria|.13;Gray and Adira, Forever Joined|.19;Hemmer, Fixing What Is Broken|.18;Highly Illogical|.17;Hive Mind Coprocessor|.27;Hologram Janeway|.23;Hologram Stalker|.15;Hoshi Sato, Exolinguist|.14;Impossible Choice|.24;In the Pale Moonlight|.18;Isolinear Processor|.2;Jake Sisko, War Correspondent|.23;Jett Reno, Problem Solver|.13;Khaaaaaaaaaaaannn!|.2;Khan, Despot by Design|.17;Kirk, Commanding Officer|.18;L'Rell, Fierce Visionary|.24;La'An Noonien-Singh, Security|.1;Locutus, the One Who Speaks|.25;Lore, Positronic Provocateur|.18;Mugato|.21;Munitions Enthusiast|.13;Neelix, Moral Support|.15;Organic Avulsion Unit|.25;Phlox, Unorthodox Doctor|.23;Picard, Leading by Example|.19;Ravenous Cosmozoan|.17;Red Alert!|.15;Resistance Is Futile|.25;Rules of Acquisition|.19;Rutherford, Upgraded Ensign|.22;Saavik, Stoic Student|.18;Sarcophagus, Ship of the Dead|.2;Saru, Unthreatened|.15;Seven of Nine|.21;Sickbay|.22;Spatial Anomaly|.2;Species 8472|.15;Spock, Always Your Friend|.2;Storied Veteran|.14;Subspace Anomaly|.19;Support Mission|.23;Sylvia Tilly, Joy of Discovery|.12;Syndicate Liquidators|.15;Targ Wrangler|.12;Tell Me What You See|.22;Temporal Anomaly|.23;Test of Conviction|.22;Test of Courage|.26;Test of Identity|.17;Test of Loyalty|.2;Test of Priorities|.27;The Doctor, EMH|.18;The Duras Sisters|.14;The Measure of a Man|.15;The Naked Time|2.94;The Traveler|.21;There's Coffee in that Nebula|.17;Those Old Scientists|.17;Transporter Malfunction|.18;Type-2 Phaser|.13;U.S.S. Cerritos, Following Up|.22;U.S.S. Excelsior, Cutting Edge|.24;U.S.S. Voyager, Lone Wanderer|.28;Una Chin-Riley, Number One|.15;V'Ger, the Intruder|.19;Vash, Freelance Archaeologist|.21;Vengeance Mission|.2;Vulcan Mind-Meld|.22;Warp Speed|.32;Worf, Honor-Bound Warrior|.21;Zefram Cochrane, Warp Pioneer|.2;Zero, Incorporeal Sensate|.11`);
+const BM=P(`Captain James T. Kirk|17.52;Deep Space 9|25.27;Jadzia Dax, Living Legacy|13.42;Captain Jean-Luc Picard|8.72;Mr. Spock, Science Officer|9.18;Quark, Humble Proprietor|5.36;Dr. Joseph M'Benga|7.65;Dr. Beverly Crusher|7.43;Borg Cube|6.96;Captain Kathryn Janeway|5.58;Death Is Irrelevant|5.51;Crystalline Entity|3.5;Q, Stacking the Deck|4.78;Khan, Vengeful Heart|2.65;Georgiou, Terran Emperor|2.33;Seven of Nine, Unassimilated|2.55;Scotty, Miracle Worker|2.08;Lieutenant Commander Data|2.62;Gul Dukat, Colonial Prefect|1.35;U.S.S. Enterprise-A, Free Spirit|1.46;Rok-Tahk, Budding Scientist|1.31;Kobayashi Maru Scenario|.77;Starfleet Academy|1.15;Infinite Diversity|.43;Excalbian Gamemaster|.45`);
+const BR=P(`All Good Things . . .|.25;Antagonist Incorporator|.44;Armus, Skin of Evil|.32;Blood Crypt|6.48;Branching Timeline|.29;Brazen Bluff|2.44;Breeding Pool|5.81;Captain Benjamin Sisko|.36;Captain Jonathan Archer|.25;Captain Pike, Fullness of Time|.34;Collation Trimatrix|.64;D-7 Battle Cruiser|.28;Dathon, His Heart Open|.27;Deanna Troi, Psychic Counsel|.45;Deep Space Scan|.25;Dominion Infiltration|.27;Dr. Leonard "Bones" McCoy|.36;Elim Garak, Simple Tailor|.3;Encounter the Unknown|.36;Engineered Explosives|.39;Federation Outpost|.76;Federation Resupply|.88;General Chang, Cold Warrior|.23;Genesis Device|3.18;Godless Shrine|6.29;Gowron, Eager for Battle|.25;Grand Nagus Zek|.3;Gwyndala, the Progeny|.23;H.M.S. Bounty, Unlikely Timeship|.32;Hallowed Fountain|5.62;Hit It!|1.7;Holo-Engineer|.27;Kai Winn, Faithless Leader|.38;Kira Nerys, Firebrand|.34;Live Long and Prosper|.32;Lt. Cmdr. Geordi La Forge|.36;Lwaxana Troi, Charming Guest|.66;MACO Strike Team|.3;Miles O'Brien, Transporter Ops|.24;Mirror Universe Intrusion|.29;Ni'Var Science Academy|.74;Nog, Ambitious Cadet|.37;Nyota Uhura, Communications|.35;Overflow Submatrix|.35;Overgrown Tomb|5.41;Pah-Wraith|.26;Peace in Our Time|.39;Primary Unimatrix Adjunct|.63;Q Continuum|.52;Quark's Bar|.5;Replicator|.94;Romulan Bird-of-Prey|.28;Sacred Foundry|6.58;Salt Vampire|1.03;Sarek, Federation Ambassador|.27;Sela, Tal Shiar Paradox|.24;Stable Wormhole|2.34;Steam Vents|6.95;Stomping Ground|5.33;Subcommander T'Pol|.27;Sulu, Space Swashbuckler|.28;Tasha Yar, Out of Time|.28;Temple Garden|5.56;The Caretaker|.29;The City on the Edge of Forever|.26;The Destruction of Praxis|.25;The Holodeck|.44;The Inner Light|.31;The Needs of the Many|1.35;The Unicomplex|1.2;The Wrath of Khan|.32;Troubling Tribbles|.95;U.S.S. Discovery, at Black Alert|.58;U.S.S. Enterprise-D, Galaxy-Class|.43;U.S.S. Reliant, From Hell's Heart|.25;Watery Grave|7.58;Wesley Crusher, Starfleet Cadet|.33;Will Riker, First in the Field|.49;Worf, Intelligence Contractor|.28;Year of Hell|.26`);
+const EXM=P(`Borg Cube|10.3;Crystalline Entity|7.19;Deep Space 9|32.77;Dr. Joseph M'Benga|10.83;Georgiou, Terran Emperor|4.89;Gul Dukat, Colonial Prefect|4.56;Rok-Tahk, Budding Scientist|3.26;U.S.S. Enterprise-A, Free Spirit|4.88`);
+const EXR=P(`Antagonist Incorporator|1;Armus, Skin of Evil|1.03;Branching Timeline|.46;Brazen Bluff|3.45;Captain Pike, Fullness of Time|.72;Captain Jonathan Archer|.4;Collation Trimatrix|2.39;D-7 Battle Cruiser|.49;Elim Garak, Simple Tailor|.87;Engineered Explosives|.98;Grand Nagus Zek|.46;Gwyndala, the Progeny|.47;H.M.S. Bounty, Unlikely Timeship|.91;Hit It!|2.54;Holo-Engineer|.91;Kai Winn, Faithless Leader|.71;Kira Nerys, Firebrand|1.89;Lwaxana Troi, Charming Guest|2.57;MACO Strike Team|.6;Miles O'Brien, Transporter Ops|.59;Pah-Wraith|.5;Romulan Bird-of-Prey|.46;Stable Wormhole|4.31;Subcommander T'Pol|.6;The Caretaker|.52;U.S.S. Discovery, at Black Alert|2.99;U.S.S. Enterprise-D, Galaxy-Class|2.8;U.S.S. Reliant, From Hell's Heart|.56`);
+const LCM=P(`Captain Jean-Luc Picard|17.62|227.23;Captain Kathryn Janeway|12.02|128.84;Death Is Irrelevant|7.66;Dr. Beverly Crusher|9.13;Lieutenant Commander Data|7.22;Q, Stacking the Deck|5.64|71.44;Seven of Nine, Unassimilated|4.72|59.77;Infinite Diversity|.8`);
+const LCR=P(`Deanna Troi, Psychic Counsel|.99|35.2;Deep Space Scan|.41|5.28;Dominion Infiltration|.51;Encounter the Unknown|.38|4.87;Lt. Cmdr. Geordi La Forge|.9|31;Overflow Submatrix|.43|8.73;Peace in Our Time|.42|13.12;Primary Unimatrix Adjunct|1.26|18.26;Replicator|2.16|21.36;Sela, Tal Shiar Paradox|.32|3.39;Tasha Yar, Out of Time|.39|12.85;Wesley Crusher, Starfleet Cadet|.38|7.64;Will Riker, First in the Field|.61|123.31;Dathon, His Heart Open|.43|71.99`);
+const LCU=P(`Command Subadjunct|.32|3.04;Locutus, the One Who Speaks|.35|3.49;Organic Avulsion Unit|.31|2.85;Resistance Is Futile|.32|2.74;There's Coffee in that Nebula|.26|1.94;Warp Speed|.28|2.88;Worf, Honor-Bound Warrior|.32|4.13`);
+const SHK=P(`Blood Crypt|10.85|47.78;Breeding Pool|9.98|67.9;Godless Shrine|12.09|45.34;Hallowed Fountain|9.9|34.82;Overgrown Tomb|9.01|52.01;Sacred Foundry|11.77|55.5;Steam Vents|10.94|63.87;Stomping Ground|9.43|45.23;Temple Garden|7.37|46.69;Watery Grave|12.44|60.1`);
+const CEM=P(`Captain James T. Kirk|18.43|114.07;Mr. Spock, Science Officer|19.47|166.68;Khan, Vengeful Heart|3.58;Kobayashi Maru Scenario|1.98|32.72;Scotty, Miracle Worker|2.78|50.01;Excalbian Gamemaster|2.1`);
+const CER=P(`Dr. Leonard "Bones" McCoy|.39|13.77;Federation Resupply|.99|22.66;General Chang, Cold Warrior|.5|5.74;Genesis Device|4.99|36;Live Long and Prosper|.41|3.17;Mirror Universe Intrusion|.61|5.41;Nyota Uhura, Communications|.9|16.66;Salt Vampire|1.59|19.08;Sarek, Federation Ambassador|.35;Sulu, Space Swashbuckler|.5|14.03;The Destruction of Praxis|.44|6.47;The Needs of the Many|1.54;Troubling Tribbles|2.47|13.96`);
+const CEU=P(`David and Carol Marcus, Creators|.27|1.06;Dr. McCoy, Surly Surgeon|.24|2.77;Ensign Pavel Chekov|.26|2.16;Khan, Despot by Design|.27|2.91;Saavik, Stoic Student|.43|2.27`);
+const SCM=P(`Captain Kathryn Janeway|8.35;Death Is Irrelevant|11.09;Infinite Diversity|1.31;Jadzia Dax, Living Legacy|15.67;Lieutenant Commander Data|4.65;Mr. Spock, Science Officer|14.38;Quark, Humble Proprietor|5.8`);
+const SCR=P(`Captain Benjamin Sisko|.4;Dominion Infiltration|.48;Mirror Universe Intrusion|.47;Nog, Ambitious Cadet|.43;Nyota Uhura, Communications|1.58;Quark's Bar|1.67;Sulu, Space Swashbuckler|.49;The Holodeck|.71`);
+const SCU=P(`Command Subadjunct|.33;Conquest Mission|.3;Constable Odo|.29;Dominion Saboteur|.3;Kirk, Commanding Officer|.33;Locutus, the One Who Speaks|.37;Resistance Is Futile|.35;Seven of Nine|.29;Test of Courage|.34;Transporter Malfunction|.27`);
+const KFC=P(`A Good Day to Die|.24`),KFU=P(`Bat'leth|.29;Storied Veteran|.31;Vengeance Mission|.31;The Duras Sisters|.28;L'Rell, Fierce Visionary|.27;Worf, Honor-Bound Warrior|.37`),KFR=P(`General Chang, Cold Warrior|.4;Worf, Intelligence Contractor|.42;Gowron, Eager for Battle|.47`);
+const XF=a=>a.map(e=>(e[3]=1,e));
+const KSC=XF(P(`A Good Day to Die|1.57`)),KSU=XF(P(`Bat'leth|1.45;Storied Veteran|.92;Vengeance Mission|.86;The Duras Sisters|2.69;L'Rell, Fierce Visionary|1.98;Worf, Honor-Bound Warrior|1.91`)),KSR=XF(P(`General Chang, Cold Warrior|5.5;Worf, Intelligence Contractor|5.76;Gowron, Eager for Battle|3.73`));
+const BLR=P(`Federation Outpost|1.32;Ni'Var Science Academy|1.31;Q Continuum|.96;Quark's Bar|2.21;The Unicomplex|2.51`);
+const LAND=P(`Plains|.3|.64;Island|.28|.83;Swamp|.3|.73;Mountain|.27|.68;Forest|.29|.51`);
+const TRCR=P(`Sea of Clouds|17;Training Center|15.15;Exploration|14.62;One, Borg Evolved|13.4;Gift of Perfection|12.08;Vault of Champions|11.49;Heroic Intervention|11.24;Reclamation Specialist|10.61;Tom Paris, Risk-Taker|10.11;Morphic Pool|9.81;Hugh, First of Many|9.46;Lotus Cobra|8.98;Cmdr. Troi, Outgoing Empath|8.38`);
+const TRCM=P(`Pest Control|13.93;Combat Celebrant|9.62;Orb of the Emissary|9.55`);
+const BCMD=P(`Locutus of Borg|39.18;Captain Kirk, Boldly Going|17.25;Commander Spock|13.47;Jean-Luc Picard, Luminary|10.78;The Borg Queen|8.84`);
+const SBX=P(`Jean-Luc, Mon Capitaine|14.23;Sulu, Heroic Helmsman|8.95;Uhura, Xenolinguist|10;Q, Your Illustrious Host|9.5;Troi, Winging It|9;Worf, Still Not Merry|8.5;Data, Professor of Humanities|8;La Forge, Thoughtful as Ever|7`);
+const SD=P(`Khan, Engineered Evil (Sheoldred)|75;Starbase Yorktown (Talon Gates)|26.9;Leonard McCoy (Bristly Bill)|20.79;Academy on the Bay (Minamo)|19.9;Michael Burnham (Torbran)|4.55;Nero (Ertai Resurrected)|3;Benny Russell (Mikaeus)|.78;Scotty, Transwarp Transporter (Arcum Dagsson)|8;Flare of Fortitude|8;Kirk, Alluring Upstart (Sisay)|3;Chekov, Young Wayfinder (Tatyova)|.77;General Picard (Kenrith)|1.26;Keenser (Rishkar)|.45;Hull Breach|.42;Worf, Regent of Terok Nor (Mogis)|5.95;Hikaru Sulu (Loot)|3;Spock, Strangely Human (Stella Lee)|3;Intendant Kira Nerys (Drivnod)|5;Shizo, Death's Storehouse|8;Sen Triplets (Stardates)|9.93`);
+const SDO=["Other Stardates card",3,null],TRO=["Other Commander extended-art rare",1.5,null],ENT=["Starship Enterprise",10.61,null];
+const HEAD=["Captain Kathryn Janeway","Lieutenant Commander Data","Lt. Cmdr. Geordi La Forge","Captain James T. Kirk","Captain Jean-Luc Picard","Seven of Nine, Unassimilated"];
+const TOK=["Borg // Clue","Officer // New Planet","Klingon Warrior // Treasure","Human // Murf","Romulan // Worm","Food // Illusion"];
+const SIGNED=15000;
+let HP=1/1250;
+const pk=a=>a[Math.floor(Math.random()*a.length)];
+const w=t=>{let s=0;for(const x of t)s+=x[0];let r=Math.random()*s;for(const x of t){if((r-=x[0])<0)return x[1]()}return t[t.length-1][1]()};
+function mk(e,r,tr,f,sl,ns,fmul){let p=e[1],est=!!ns;
+if(f==="Surge foil"){if(e[2]!=null)p=e[2];else{p=e[1]*8;est=true}}
+else if(f==="Foil"&&!e[3]){p=e[1]*(fmul||1.3);est=true}
+return{n:e[0],r,tr,f,sl,p,est}}
+function pack(){const p=[],used=new Set();const u=a=>{let x,i=0;do{x=pk(a);i++}while(used.has(x[0])&&i<25);used.add(x[0]);return x};
+const sd=f=>Math.random()<1/3?mk(SDO,"M","Stardates",f,"Special rare slot",1,2):mk(u(SD),"M","Stardates",f,"Special rare slot",1,2);
+for(let i=0;i<5;i++)p.push(Math.random()<.11?mk(u(DUAL),"C","","Foil","Foil common"):mk(u(CN),"C","","Foil","Foil common"));
+for(let i=0;i<3;i++)p.push(mk(u(UN),"U","","Foil","Foil uncommon"));
+p.push(w([[2.7,()=>mk(KFC[0],"C","Klingon frame","Foil","Special slot")],[1.4,()=>mk(KSC[0],"C","Klingon script","Foil","Special slot")],[16.1,()=>mk(pk(KFU),"U","Klingon frame","Foil","Special slot")],[8.1,()=>mk(pk(KSU),"U","Klingon script","Foil","Special slot")],[26.9,()=>mk(pk(SCU),"U","Scene","Foil","Special slot")],[18.9,()=>mk(pk(LCU),"U","LCARS frame","Foil","Special slot")],[13.5,()=>mk(pk(CEU),"U","Classic Enterprise","Foil","Special slot")],[7.3,()=>mk(pk(LCU),"U","LCARS frame","Surge foil","Special slot")],[5.2,()=>mk(pk(CEU),"U","Classic Enterprise","Surge foil","Special slot")]]));
+p.push(w([[1,()=>mk(pk(LAND),"L","Away team","Foil","Full-art land")],[1,()=>mk(pk(LAND),"L","Away team","Surge foil","Full-art land")],[1,()=>mk(pk(LAND),"L","Holodeck","Foil","Full-art land")]]));
+p.push(Math.random()<.135?mk(u(BM),"M","","Foil","Foil rare slot"):mk(u(BR),"R","","Foil","Foil rare slot"));
+p.push(w([[93.1,()=>Math.random()<.07?mk(u(TRCR),"R","Extended art (Commander)","","Commander slot",1):mk(TRO,"R","Extended art (Commander)","","Commander slot",1)],[2.1,()=>mk(u(TRCM),"M","Extended-art reprint","","Commander slot",1)],[1,()=>mk(u(BCMD),"M","Borderless commander","","Commander slot",1)],[2.8,()=>mk(ENT,"R","Borderless","","Commander slot",1)],[1,()=>mk(u(BCMD),"M","Borderless","","Commander slot",1)]]));
+const nf=()=>w([[1.9,()=>mk(u(KFR),"R","Klingon frame","","Special rare slot")],[4.2,()=>mk(u(SCR),"R","Scene","","Special rare slot")],[1.7,()=>mk(u(SCM),"M","Scene","","Special rare slot")],[4.6,()=>mk(u(SBX),"R","Scene Box","","Special rare slot",1)],[10.4,()=>mk(u(LCR),"R","LCARS frame","","Special rare slot")],[2.3,()=>mk(u(LCM),"M","LCARS frame","","Special rare slot")],[7.7,()=>mk(u(SHK),"R","LCARS shock land","","Special rare slot")],[3.5,()=>mk(u(BLR),"R","Borderless land","","Special rare slot")],[.6,()=>mk(["Starfleet Academy",2.55,null],"M","Borderless land","","Special rare slot")],[8.5,()=>mk(u(CER),"R","Classic Enterprise","","Special rare slot")],[2.1,()=>mk(u(CEM),"M","Classic Enterprise","","Special rare slot")],[21.5,()=>mk(u(EXR),"R","Extended art","","Special rare slot")],[3.1,()=>mk(u(EXM),"M","Extended art","","Special rare slot")],[23.1,()=>sd("")],[5,()=>sd("Foil")]]);
+p.push(nf());p.push(nf());
+if(Math.random()<HP){const h=pk(HEAD);p.push(mk([h,SIGNED,null,1],"H","Signed headliner","Foil","Foil special slot",h!==HEAD[0]))}else
+p.push(w([[2.2,()=>mk(u(KFR),"R","Klingon frame","Foil","Foil special slot")],[2.7,()=>mk(u(KSR),"R","Klingon script","Foil","Foil special slot")],[4.9,()=>mk(u(SCR),"R","Scene","Foil","Foil special slot")],[2,()=>mk(u(SCM),"M","Scene","Foil","Foil special slot")],[12,()=>mk(u(LCR),"R","LCARS frame","Foil","Foil special slot")],[2.7,()=>mk(u(LCM),"M","LCARS frame","Foil","Foil special slot")],[8.9,()=>mk(u(SHK),"R","LCARS shock land","Foil","Foil special slot")],[3.2,()=>mk(u(LCR),"R","LCARS frame","Surge foil","Foil special slot")],[1,()=>mk(u(LCM),"M","LCARS frame","Surge foil","Foil special slot")],[4.6,()=>mk(u(SHK),"R","LCARS shock land","Surge foil","Foil special slot")],[9.8,()=>mk(u(CER),"R","Classic Enterprise","Foil","Foil special slot")],[2.4,()=>mk(u(CEM),"M","Classic Enterprise","Foil","Foil special slot")],[3,()=>mk(u(CER),"R","Classic Enterprise","Surge foil","Foil special slot")],[1,()=>mk(u(CEM),"M","Classic Enterprise","Surge foil","Foil special slot")],[24.9,()=>mk(u(EXR),"R","Extended art","Foil","Foil special slot")],[3.6,()=>mk(u(EXM),"M","Extended art","Foil","Foil special slot")],[5.3,()=>mk(u(SBX),"R","Borderless commander card","Foil","Foil special slot",1)],[1.8,()=>mk(u(BCMD),"M","Borderless commander card","Foil","Foil special slot",1)]]));
+p.push(Math.random()<.35?(Math.random()<1/7?mk(["Art card (gold-stamped)",1.5,null],"X","","","Bonus",1):mk(["Art card",.25,null],"X","","","Bonus",1)):mk([pk(TOK)+" token",.33,null],"X","Double-sided","Foil","Bonus"));
+return p}
+
+const $=id=>document.getElementById(id);
+const fm=v=>(v<0?"-$":"$")+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const f0=v=>(v<0?"-$":"$")+Math.round(Math.abs(v)).toLocaleString("en-US");
+const fi=v=>Math.round(v).toLocaleString("en-US");
+const fp=v=>v<.0995?(v*100).toFixed(2)+"%":v<.995?(v*100).toFixed(1)+"%":">99%";
+const cost=()=>Math.max(.01,+$("price").value||37.99);
+const pct=()=>+$("pct").value/100;
+
+let AVG=0;
+(function(){const keep=HP;HP=0;let t=0;const N=12000;for(let i=0;i<N;i++){const p=pack();for(const k of p)t+=k.p}AVG=t/N;HP=keep})();
+
+function packsFor(q,p){return Math.ceil(Math.log(1-q)/Math.log(1-p))}
+function drawChart(){const p=HP,c=cost(),W=760,H=320,L=52,R=20,T=18,B=44,pw=W-L-R,ph=H-T-B;
+const n50=packsFor(.5,p),n90=packsFor(.9,p),nmax=Math.ceil(packsFor(.95,p)/100)*100;
+const x=n=>L+n/nmax*pw,y=v=>T+(1-v)*ph,pr=n=>1-Math.pow(1-p,n);
+let s="";
+[0,.25,.5,.75,1].forEach(v=>{s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${v*100}%</text>`});
+for(let i=0;i<=4;i++){const n=nmax*i/4;s+=`<text class="ax" x="${x(n)}" y="${H-B+18}" text-anchor="${i===0?"start":i===4?"end":"middle"}">${fi(n)}</text>`}
+s+=`<text class="ax" x="${L+pw/2}" y="${H-6}" text-anchor="middle">Packs opened</text>`;
+let d="";for(let i=0;i<=200;i++){const n=nmax*i/200;d+=(i?"L":"M")+x(n).toFixed(1)+" "+y(pr(n)).toFixed(1)}
+s+=`<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`;
+[[n50,.5,"50%"],[n90,.9,"90%"]].forEach(([n,v,l])=>{s+=`<line x1="${x(n)}" x2="${x(n)}" y1="${y(v)}" y2="${y(0)}" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="3 4"/><circle cx="${x(n)}" cy="${y(v)}" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text class="lab" x="${x(n)+10}" y="${y(v)+18}">${l} at ${fi(n)} packs, ${f0(n*c)}</text>`});
+s+=`<line id="xh" x1="0" x2="0" y1="${T}" y2="${y(0)}" stroke="var(--ink2)" stroke-width="1" visibility="hidden"/><circle id="xd" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/><rect id="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent"/>`;
+const svg=$("chart");svg.innerHTML=s;
+const hit=$("hit"),xh=$("xh"),xd=$("xd"),tip=$("tip");
+const move=ev=>{const r=svg.getBoundingClientRect(),sx=(ev.clientX-r.left)/r.width*W,n=Math.max(0,Math.min(nmax,Math.round((sx-L)/pw*nmax))),v=pr(n);
+xh.setAttribute("x1",x(n));xh.setAttribute("x2",x(n));xh.setAttribute("visibility","visible");xd.setAttribute("cx",x(n));xd.setAttribute("cy",y(v));xd.setAttribute("visibility","visible");
+tip.style.display="block";tip.style.left=(x(n)/W*r.width+svg.offsetLeft)+"px";tip.style.top=(y(v)/H*r.height+svg.offsetTop)+"px";
+tip.innerHTML=`${fi(n)} packs · ${f0(n*c)} spent<br>${fp(v)} chance of a signed card`};
+hit.addEventListener("pointermove",move);hit.addEventListener("pointerdown",move);
+hit.addEventListener("pointerleave",()=>{tip.style.display="none";xh.setAttribute("visibility","hidden");xd.setAttribute("visibility","hidden")})}
+
+function math(){const N=+$("odds").value;HP=1/N;const c=cost(),p=HP;$("oddsV").textContent=fi(N);
+const n50=packsFor(.5,p),n90=packsFor(.9,p),box=1-Math.pow(1-p,12);
+$("tBox").textContent=fp(box);$("tBoxS").textContent=`${f0(12*c)} of packs · about 1 box in ${fi(1/box)}`;
+$("t50").textContent=fi(n50);$("t50S").textContent=f0(n50*c);
+$("t90").textContent=fi(n90);$("t90S").textContent=f0(n90*c);
+$("tAvg").textContent=f0(N*c);$("tAvgS").textContent=`${fi(N)} packs · other cards return about ${f0(N*AVG)}`;
+$("hAvg").textContent=f0(N*c);
+const b=Math.max(0,+$("budget").value||0),n=Math.floor(b/c),ch=1-Math.pow(1-p,n);
+$("bPacks").textContent=fi(n);$("bChance").textContent=n?fp(ch):"0%";
+$("bChanceS").textContent=n?(ch<.5?`${fp(1-ch)} chance of no signed card`:`still a ${fp(1-ch)} chance of none`):"";
+$("bBack").textContent=f0(n*AVG);$("bBackS").textContent=`about ${fm(AVG)} a pack at full market price, before fees`;
+$("bLoss").textContent=f0(Math.max(0,n*(c-AVG)));
+drawChart();upd()}
+
+const RN={C:"Common",U:"Uncommon",R:"Rare",M:"Mythic",L:"Basic land",X:"Extra",H:"Signed"};
+let st={n:0,spent:0,mkt:0,best:null},busy=false,stop=false;
+function upd(){$("pctv").textContent=$("pct").value;const v=st.mkt*pct(),net=v-st.spent;$("mP").textContent=fi(st.n);$("mS").textContent=fm(st.spent);$("mV").textContent=fm(v);
+const e=$("mN");e.textContent=(net>0?"+":"")+fm(net);e.className="v"+(st.n?(net>=0?" gain":" loss"):"");
+$("best").textContent=st.best?`Best pull so far: ${st.best.n} (${st.best.tr||"regular"}${st.best.f?", "+st.best.f.toLowerCase():""}) at ${fm(st.best.p)}`:""}
+const sp=(v)=>`<span class="num ${v<0?"loss":"gain"}">${v>0?"+":""}${fm(v)}</span>`;
+function card(k,t){return `<div class="cd ${t?"tgt":k.r}"><div><span class="pl ${k.r}">${RN[k.r]}</span>${k.f?`<span class="pl f">${k.f}</span>`:""}</div><div class="nm">${k.n}</div><div class="sl">${k.tr?k.tr+" · ":""}${k.sl}</div><div class="pr">${fm(k.p)}${k.est?" <small>est</small>":""}</div></div>`}
+function show(p,tg){$("grid").innerHTML=p.map(k=>card(k,tg&&tg(k))).join("")}
+function record(p){let tot=0;for(const k of p){tot+=k.p;if(!st.best||k.p>st.best.p)st.best=k}st.n++;st.spent+=cost();st.mkt+=tot;return tot}
+function line(p,tot){const net=tot*pct()-cost(),m=p.filter(x=>x.r==="M").length,h=p.find(x=>x.r==="H");
+return (h?`Signed card: ${h.n}. `:"")+`This pack: ${fm(tot)} at market, ${m} mythic${m===1?"":"s"}. After selling: ${sp(net)} against the pack price.`}
+function openOne(){if(busy)return;const p=pack(),tot=record(p);show(p);$("sum").innerHTML=line(p,tot);upd()}
+$("go").onclick=openOne;
+$("ten").onclick=()=>{if(busy)return;let all=[],t0=st.mkt,s0=st.spent;for(let i=0;i<10;i++){const p=pack();record(p);all=all.concat(p)}
+const tot=st.mkt-t0,spd=st.spent-s0;all.sort((a,b)=>b.p-a.p);show(all.slice(0,12));
+$("sum").innerHTML=`10 packs: ${fm(tot)} at market against ${fm(spd)} spent. After selling: ${sp(tot*pct()-spd)}. Showing the 12 most valuable cards.`;upd()};
+$("rst").onclick=()=>{if(busy)return;st={n:0,spent:0,mkt:0,best:null};$("grid").innerHTML="";$("sum").textContent="";$("hres").innerHTML="";$("hprog").textContent="";upd()};
+$("pct").oninput=upd;
+["odds","price","budget"].forEach(i=>$(i).addEventListener("input",math));
+
+const ALL=new Map();[CN,DUAL,UN,BM,BR,EXM,EXR,LCM,LCR,SHK,LCU,CEM,CER,CEU,SCM,SCR,SCU,KFR,KFU,BLR,LAND,TRCR,TRCM,BCMD,SBX,SD,[ENT]].forEach(a=>a.forEach(e=>ALL.set(e[0].toLowerCase(),e[0])));HEAD.forEach(n=>ALL.set(n.toLowerCase(),n));
+$("names").innerHTML=[...ALL.values()].sort().map(n=>`<option value="${n.replace(/"/g,"&quot;")}">`).join("");
+const SHKN=new Set(SHK.map(e=>e[0])),norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim(),NAMES=[...ALL.values()].map(n=>[n,norm(n)]);
+const EX=["any signed card","kirk","foil mythic worth $50+","LCARS shock land","any Stardates card","surge foil classic enterprise","Sheoldred","locutus or borg queen"];
+$("exs").innerHTML=EX.map(e=>`<button type="button" class="chip">${e}</button>`).join("");
+[...$("exs").children].forEach(e=>e.onclick=()=>{$("hn").value=e.textContent;live()});
+function parse1(q){let s=" "+q.toLowerCase().replace(/[’]/g,"'")+" ";const T=[],L=[];let m;
+const has=re=>{if(re.test(s)){s=s.replace(re," ");return true}return false};
+if(m=s.match(/(?:under|below|less than|cheaper than|<=?)\s*\$?\s*(\d+(?:\.\d+)?)/)){const v=+m[1];T.push(k=>k.p<v);L.push("worth under "+fm(v));s=s.replace(m[0]," ")}
+if(m=s.match(/(?:over|above|more than|at least|worth|>=?)\s*\$?\s*(\d+(?:\.\d+)?)\s*(?:\+|or more|and up|dollars|bucks)?/)||s.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\+|or more|and up)?/)||s.match(/(\d+(?:\.\d+)?)\s*(?:\+\s*)?(?:dollars|bucks)/)){const v=+m[1];T.push(k=>k.p>=v);L.push("worth "+fm(v)+"+");s=s.replace(m[0]," ")}
+if(has(/\b(signed|autograph(ed|s)?|headliners?|signatures?)\b/)){T.push(k=>k.r==="H");L.push("signed headliner")}
+if(has(/\blcars shock\s?lands?\b|\blcars shocks?\b/)){T.push(k=>k.tr==="LCARS shock land");L.push("LCARS shock land")}
+else if(has(/\bshock\s?lands?\b|\bshocks?\b/)){T.push(k=>SHKN.has(k.n));L.push("shock land")}
+if(has(/\blcars\b/)){T.push(k=>k.tr.startsWith("LCARS"));L.push("LCARS")}
+if(has(/\bclassic enterprise\b|\bclassic\b|\bposters?\b/)){T.push(k=>k.tr==="Classic Enterprise");L.push("Classic Enterprise")}
+if(has(/\bscene box(es)?\b/)){T.push(k=>k.tr==="Scene Box");L.push("Scene Box")}else if(has(/\bscenes?\b/)){T.push(k=>k.tr.startsWith("Scene"));L.push("scene card")}
+if(has(/\bklingon (script|language)\b/)){T.push(k=>k.tr==="Klingon script");L.push("Klingon script")}else if(has(/\bklingon\b/)){T.push(k=>k.tr.startsWith("Klingon"));L.push("Klingon")}
+if(has(/\bextended[\s-]?arts?\b|\bextended\b|\bext art\b/)){T.push(k=>/xtended/i.test(k.tr));L.push("extended art")}
+if(has(/\bborderless\b/)){T.push(k=>/Borderless|Stardates/.test(k.tr));L.push("borderless")}
+if(has(/\bstar\s?dates?\b/)){T.push(k=>k.tr==="Stardates");L.push("Stardates")}
+if(has(/\bfull[\s-]?art\b|\bbasic lands?\b|\bholodeck lands?\b|\baway team lands?\b/)){T.push(k=>k.r==="L");L.push("full-art basic land")}
+if(has(/\bcommander\b/)){T.push(k=>k.sl==="Commander slot"||/ommander/.test(k.tr));L.push("Commander card")}
+if(has(/\bsurge(\s?foils?)?\b/)){T.push(k=>k.f==="Surge foil");L.push("surge foil")}else if(has(/\bnon[\s-]?foils?\b/)){T.push(k=>!k.f);L.push("non-foil")}else if(has(/\bfoils?\b|\bshiny\b/)){T.push(k=>!!k.f);L.push("foil")}
+if(has(/\bmythics?( rares?)?\b/)){T.push(k=>k.r==="M");L.push("mythic")}else if(has(/\brares?\s*(\+|or better|or higher|and up)/)){T.push(k=>"RMH".includes(k.r));L.push("rare or better")}else if(has(/\brares?\b/)){T.push(k=>k.r==="R");L.push("rare")}else if(has(/\buncommons?\b/)){T.push(k=>k.r==="U");L.push("uncommon")}else if(has(/\bcommons?\b/)){T.push(k=>k.r==="C");L.push("common")}
+s=s.replace(/\b(any|a|an|the|card|cards|version|versions|copy|copies|of|me|i|get|pull|until|some|kind|type|with|that|is|in|from|my|want|one|art|print|printing|frame|treatment|land|lands|cost|costs|worth|plus|and)\b/g," ");
+const words=norm(s).split(" ").filter(Boolean);
+if(words.length){const hit=NAMES.filter(([,nn])=>words.every(wd=>nn.includes(wd)));
+if(!hit.length)return{err:`No card name contains "${words.join(" ")}".`};const set=new Set(hit.map(h=>h[0]));T.push(k=>set.has(k.n));
+L.push(hit.length===1?hit[0][0]:`any of ${hit.length} cards matching "${words.join(" ")}"`)}
+if(!T.length)return{err:"Nothing specific to look for in that."};
+return{ok:k=>T.every(t=>t(k)),lab:L.join(" · ")}}
+const split=q=>q.split(/\s+or\s+(?!better|higher|more)/i).filter(x=>x.trim()).map(parse1);
+function target(){const q=$("hn").value.trim();if(!q){$("herr").textContent="Type what you want to pull first.";return null}
+const alts=split(q),bad=alts.find(a=>a.err);
+if(bad){$("herr").textContent=bad.err+" Try a card name, a version (signed, LCARS, Stardates), a finish, a rarity or a price.";return null}
+$("herr").textContent="";return{ok:k=>alts.some(a=>a.ok(k)),lab:alts.map(a=>a.lab).join(" or ")}}
+function live(){const q=$("hn").value.trim();$("herr").textContent="";if(!q){$("hint").textContent="";return}
+const alts=split(q),bad=alts.find(a=>a.err);$("hint").textContent=bad?bad.err:"Looking for: "+alts.map(a=>a.lab).join(" or ")}
+$("hn").oninput=live;
+const CAP=100000;
+function lock(b){busy=b;["go","ten","rst","hgo","htr"].forEach(i=>$(i).disabled=b)}
+$("hstop").onclick=()=>{stop=true};
+$("hgo").onclick=()=>{if(busy)return;const t=target();if(!t)return;lock(true);stop=false;$("hres").innerHTML="";
+let n=0,mkt=0,spd=0,c=cost(),found=null;
+const step=()=>{for(let i=0;i<500&&!found&&n<CAP;i++){const p=pack(),tot=record(p);n++;mkt+=tot;spd+=c;const f=p.find(t.ok);if(f)found={p,f}}
+$("hprog").textContent=`${fi(n)} packs opened…`;upd();
+if(found||n>=CAP||stop){lock(false);$("hprog").textContent="";const net=mkt*pct()-spd,fd=found&&found.f;
+if(found){show(found.p,t.ok);$("sum").innerHTML=line(found.p,found.p.reduce((a,k)=>a+k.p,0))+" This is the pack your card was in."}
+$("hres").innerHTML=(found?`Found in pack <strong class="num">${fi(n)}</strong>: ${fd.n} (${fd.tr||"regular"}${fd.f?", "+fd.f.toLowerCase():""}), worth ${fm(fd.p)}.`:stop?`Stopped after ${fi(n)} packs without a match.`:`No match in ${fi(CAP)} packs. That combination probably isn't in collector boosters.`)+
+`<br>This hunt cost <span class="num">${fm(spd)}</span>. Selling every card returns <span class="num">${fm(mkt*pct())}</span>, for a result of ${sp(net)}.`+
+(found&&fd.r!=="H"&&fd.p<spd?`<br>Buying that one card outright would have cost about <span class="num">${fm(fd.p)}</span>.`:"");return}
+setTimeout(step,0)};step()};
+$("htr").onclick=()=>{if(busy)return;const t=target();if(!t)return;lock(true);stop=false;$("hres").innerHTML="";
+const R=[],c=cost();let cur={n:0,mkt:0},tot=0,miss=0;
+const step=()=>{let b=0;while(b<3000&&R.length<50&&!stop){const p=pack();cur.n++;tot++;b++;for(const k of p)cur.mkt+=k.p;const ok=p.find(t.ok);if(ok||cur.n>=CAP){if(!ok)miss++;R.push(cur);cur={n:0,mkt:0}}}
+$("hprog").textContent=`Hunt ${Math.min(R.length+1,50)} of 50 · ${fi(tot)} packs opened…`;
+if(R.length>=50||stop){lock(false);$("hprog").textContent="";if(!R.length){$("hres").textContent="Stopped before any hunt finished.";return}
+const ns=R.map(r=>r.n).sort((a,b)=>a-b),q=f=>ns[Math.min(ns.length-1,Math.floor(f*ns.length))],avg=ns.reduce((a,b)=>a+b,0)/ns.length,
+nets=R.map(r=>r.mkt*pct()-r.n*c).sort((a,b)=>a-b),mn=nets[Math.floor(nets.length/2)],lost=nets.filter(v=>v<0).length;
+$("hres").innerHTML=`${R.length} hunts for ${t.lab}${miss?` (${miss} gave up at ${fi(CAP)} packs)`:""}:<br>
+Average <strong class="num">${fi(avg)} packs</strong> (<span class="num">${fm(avg*c)}</span>). Luckiest ${fi(ns[0])}, unluckiest ${fi(ns[ns.length-1])}.<br>
+One hunt in ten needed more than ${fi(q(.9))} packs (<span class="num">${fm(q(.9)*c)}</span>).<br>
+${lost} of ${R.length} hunts lost money even after selling every card. The typical result was ${sp(mn)}.<br>
+<span class="note">These test hunts don't count toward the totals below.</span>`;return}
+setTimeout(step,0)};step()};
+live();math();openOne();
+</script>
+</body>
+</html>
